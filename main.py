@@ -158,11 +158,14 @@ def mosaicedImage(targetImage, imagesDir, reuseImages=True):
 
 
 
-# name2Num("imagestouse")
 
-target = "./imgs/0.png"
 
-mockmosaic = mosaicedImage(target, "./imgs")
-print("saving Image!")
-im = Image.fromarray(mockmosaic, "RGB")
-im.save("out.png", "PNG")
+if __name__ == "__main__":
+    # name2Num("imagestouse")
+
+    target = "./imgs/0.png"
+
+    mockmosaic = mosaicedImage(target, "./imgs")
+    print("saving Image!")
+    im = Image.fromarray(mockmosaic, "RGB")
+    im.save("out.png", "PNG")
