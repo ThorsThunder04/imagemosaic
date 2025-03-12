@@ -51,7 +51,23 @@ def closest_point(pt: tuple[object, tuple],
     
     This is possible because of the `object` part of a point's type (`str` for example). That represents the point's name.
     """
-    pass
+    target_name, target_coords = pt
+
+    # we need an initial distance, but it can't be 0
+    i = 0
+    while pt_list[i][0] == target_name: i += 1
+    closest = (dist3D(target_coords, pt_list[i][1]), pt_list[i])
+
+    for i in range(len(pt_list)):
+        if pt_list[i][0] != target_name:
+            dist = dist3D(target_coords, pt_list[i][1])
+
+            # if this point is closer then the previous closest
+            if dist < closest[0]:
+                closest = (dist, pt_list[i])
+
+    # return the closest point
+    return closest[1]
 
 
 def kppv(pt: tuple[object, tuple], 
