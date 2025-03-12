@@ -26,6 +26,34 @@ def dist3D(p1: tuple, p2: tuple) -> float:
     dist = math.sqrt(sqdist)
     return dist
 
+
+def closest_point(pt: tuple[object, tuple],
+                  pt_list: list[tuple[object,tuple]],
+                  ) -> tuple[object,tuple]:
+    """
+    Returns the closest point to the target point in 3D space (the returned point isn't the target point)
+    
+    Parameters
+    ----------
+    pt : tuple[object, tuple]
+        The target point
+    pt_list : list[tuple[object, tuple]]
+        A list of points
+
+    Returns
+    -------    
+    tuple[object, tuple]
+        The closest point in `pt_list` to `pt`
+            
+    Notes
+    -----
+    The target point `pt` and the returned point can both be on the same (x, y, z) position, but they are both distinct points (ex: A(x, y, z) != B(x, y, z)).
+    
+    This is possible because of the `object` part of a point's type (`str` for example). That represents the point's name.
+    """
+    pass
+
+
 def kppv(pt: tuple[object, tuple], 
          ptlist: list[tuple[object, tuple]], 
          k: int = 0
