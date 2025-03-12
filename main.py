@@ -12,19 +12,24 @@ def name2Num(path):
         ext = file.split(".")[-1]
         os.rename(os.path.join(path, file), os.path.join(path, str(i) + "." + ext))
 
-def dist3D(p1: tuple, p2: tuple) -> float:
+def dist3D(p1: tuple[int, int, int], p2: tuple[int, int, int]) -> float:
     """
-    @brief Calculates eucludian distance between two points in 3d space
+    Calculates the eucludian distance between two points in 3D space
 
-    @param p1: tuple/list of xyz values
-    @param p2: tuple/list of xyz values 
-    @returns: distance between p1 and p2
+    Paramaters
+    ----------
+    p1, p2 : (tuple[int, int, int])
+        The two points that we will calculate distance from
+    
+    Returns
+    -------
+    float
+        The distance between the two points
     """
     x1, y1, z1 = p1
     x2, y2, z2 = p2
     sqdist = (x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2
-    dist = math.sqrt(sqdist)
-    return dist
+    return math.sqrt(sqdist)
 
 
 def closest_point(pt: tuple[object, tuple],
@@ -35,14 +40,14 @@ def closest_point(pt: tuple[object, tuple],
     
     Parameters
     ----------
-    pt : tuple[object, tuple]
+    pt : (tuple[object, tuple])
         The target point
-    pt_list : list[tuple[object, tuple]]
+    pt_list : (list[tuple[object, tuple]])
         A list of points
 
     Returns
     -------    
-    tuple[object, tuple]
+    (tuple[object, tuple])
         The closest point in `pt_list` to `pt`
             
     Notes
@@ -56,13 +61,14 @@ def closest_point(pt: tuple[object, tuple],
     # we need an initial distance, but it can't be 0
     i = 0
     while pt_list[i][0] == target_name: i += 1
+    # we store the distance of the point then the point
     closest = (dist3D(target_coords, pt_list[i][1]), pt_list[i])
 
     for i in range(len(pt_list)):
         if pt_list[i][0] != target_name:
             dist = dist3D(target_coords, pt_list[i][1])
 
-            # if this point is closer then the previous closest
+            # if this point is closer then the previous closest point
             if dist < closest[0]:
                 closest = (dist, pt_list[i])
 
