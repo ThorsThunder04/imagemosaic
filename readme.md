@@ -1,3 +1,5 @@
+### Currently undergoing a rewrite on the [rewrite branch](https://github.com/ThorsThunder04/imagemosaic/tree/rewrite)
+
 # Image Mosaic
 
 This program should make a mosaic image based off of a target image and a given dataset of other images.
