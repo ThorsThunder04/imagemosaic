@@ -3,6 +3,18 @@ from PIL import Image
 import numpy as np
 import cv2 as cv
 
+class ImageTile:
+
+    def __init__(self, file_name: str, image_matrix: np.array, n_occ: int = 0):
+        self.file_name = file_name
+        self.n_occ = n_occ # number of occurences of this image tile in the final image
+
+        self.image_matrix = image_matrix
+        # the height = rows in matrix, width = columns in matrix
+        self.height, self.width = image_matrix.shape[:2]
+        self.image_rgb = np.mean(image_matrix, (0,1), dtype=np.uint8)
+
+
 def name2Num(path):
     """
     @brief renames all files of a given folder to incremental numeric values (while conserving the original extention)
@@ -76,42 +88,26 @@ def closest_point(pt: tuple[object, tuple],
     return closest[1]
 
 
-def kppv(pt: tuple[object, tuple], 
-         ptlist: list[tuple[object, tuple]], 
-         k: int = 0
-         ) -> list[tuple]:
-    """
-    @brief Calculates k closest points to pt in 3d space
-    
-    @param pt: point in 3d space of form (imgname, point)
-    @param ptlist: list of other points of form [(imgname, point),...]
-    @param k: number of closest points to return
-    @returns: list of k points of form (imagename, point, distance)
-    """
-
-    pointswithdist = []
-
-
-    for key, val in ptlist: # calcualte distances
-        if key != pt[0]:
-            pointswithdist.append((key, val, dist3D(pt[1], val)))
-    
-    pointswithdist.sort(key=lambda x: x[2]) # sort distances
-    
-    return pointswithdist[:k] if k > 0 else pointswithdist 
-
 def loadDirImgs(path: str):
     """
-    @brief Loads all images of a directory into a dictionary of type {filename: image pixel rgb pixel aray}
+    Loads all iamges of a given directory into a dictionary
 
-    @param path: string leading to directory that contains the images to load
-    @returns: dictionary of images
+    Paramaters
+    ----------
+    path : str
+        The directory that contains all the tile images
+
+    Returns
+    -------
+    (dict[str, np.array])
+        A dictionary of all the loaded images mapped to their file names
     """
-    dictOfImgs = {} # will hold dictionary of {filename:image 3D array}
+
+    dict_of_images = {} # will hold dictionary of {filename:image 3D array}
     for img in os.listdir(path):
-        dictOfImgs[img] = cv.imread(os.path.join(path, img))
+        dict_of_images[img] = cv.imread(os.path.join(path, img))
     
-    return dictOfImgs
+    return dict_of_images
 
 def cvtHSV(imgsDict: dict) -> dict:
     """
