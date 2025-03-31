@@ -5,15 +5,12 @@ import cv2 as cv
 
 class ImageTile:
 
-    def __init__(self, file_name: str, image_matrix: np.array, n_occ: int = 0):
+    def __init__(self, file_name: str, image_matrix: np.array, image_color: tuple[int,int,int]):
         self.file_name = file_name
-        self.n_occ = n_occ # number of occurences of this image tile in the final image
 
+        self.size = image_matrix.shape[:2]
         self.image_matrix = image_matrix
-        # the height = rows in matrix, width = columns in matrix
-        self.height, self.width = image_matrix.shape[:2]
-        self.image_rgb = np.mean(image_matrix, (0,1), dtype=np.uint8)
-
+        self.image_color = image_color
 
 def name2Num(path):
     """
@@ -35,7 +32,7 @@ def dist3D(p1: tuple[int, int, int], p2: tuple[int, int, int]) -> float:
     
     Returns
     -------
-    float
+    (float)
         The distance between the two points
     """
     x1, y1, z1 = p1
@@ -88,122 +85,72 @@ def closest_point(pt: tuple[object, tuple],
     return closest[1]
 
 
-def loadDirImgs(path: str):
+def average_image_color(image_matrix: np.array) -> list[int]:
     """
-    Loads all iamges of a given directory into a dictionary
+    Calculates the average of all (r,g,b) values of an image
 
     Paramaters
     ----------
-    path : str
+    image_matrix : (np.array)
+        The image we want to calculate the average from
+    
+    Returns
+    -------
+    (list[int])
+        A list of 3 integers
+    """
+    return np.mean(image_matrix, (0,1), dtype=np.uint8).tolist()
+
+def loadDirImgs(path: str) -> ImageTile:
+    """
+    Loads all images of a given directory into a dictionary
+
+    Paramaters
+    ----------
+    path : (str)
         The directory that contains all the tile images
 
     Returns
     -------
-    (dict[str, np.array])
-        A dictionary of all the loaded images mapped to their file names
+    (dict[str, ImageTile])
+        A dictionary of ImageTile objects where an image filename maps to it's corresponding object
     """
 
     dict_of_images = {} # will hold dictionary of {filename:image 3D array}
-    for img in os.listdir(path):
-        dict_of_images[img] = cv.imread(os.path.join(path, img))
+    for file_name in os.listdir(path):
+        # load the image into a numpy matrice
+        img = cv.imread(os.path.join(path, file_name))
+        dict_of_images[file_name] = ImageTile(file_name, img, average_image_color(img))
     
     return dict_of_images
 
-def cvtHSV(imgsDict: dict) -> dict:
+def convert_to_color_space(image_dict: dict[str, dict], conversion_code: int = cv.COLOR_BGR2HSV) -> list[str, np.array]:
     """
-    @brief takes in a dictionary of images and returns a copy of the dictionary, with all images converted from RGB to HSV
+    Given a dictionary of images, returns a list of tuples with the image filename and the image converted to a color space
 
-    @param imgsDict: dictionary of numpy image arrays
-    @returns: dictionary of HSV images
-    """
-
-    hsvDict = {}
-
-    for key, value in imgsDict.items():
-        hsvDict[key] = cv.cvtColor(value, cv.COLOR_BGR2HSV)
-
-    return hsvDict
-
-def avgNpImgMat(npMat) -> list[float]:
-    """
-    @brief given a 3D numpy array of an image, calculates the average rgb value of the pixels
+    Paramaters
+    ----------
+    image_dict : (dict[str, ImageTile])
+        A dictionary of ImageTile objects
+    conversion_code : (int), default: cv.COLOR_BGR2HSV
+        The opencv2 colorspace we wish to convert to
     
-    @param npMat: 3D numpy array of an image
-    @returns: list containing the average rgb values
-    """
-    pixels = npMat.shape[0]*npMat.shape[1] # calculates how many pixels there are
-    avgVals = npMat.sum(axis=0).sum(axis=0) # sums all the rgb values together
-    avgVals = avgVals / pixels # divide each rgb value by the total number of pixels
-    return avgVals.tolist()
-
-def pythonicAvg(matr): # does same as avgNpImgMat but with just python
-    pmat = matr.tolist()
-    pixels = len(pmat)* len(pmat[0])
-    s = [0]*3
-    for a in pmat:
-        for b in a:
-            for i in range(len(b)):
-                s[i] += b[i]
-    return [x/pixels for x in s]
-
-def imgFromData(imgsDir, imgData):
-    """
-    @brief Given the calculated data taht contains the info needed to know what images to place where, we create the new image that will contain all of the tiles
-    
-    @param imgsDir: directory containing tile images
-    @param imgData: matrix containing info on what images to place on what pixels. Form: `[[(imgtitle, avgRGBOfImg, dist2targetPx), ...], ...]`
-    @returns: numpy array matrix containing image rgb data (values in uint8)
+    Returns
+    -------
+    (list[str, np.array])
+        A list of tuples. Each tuple contains the image's name and the image's np.array converted to the desired color space
     """
 
-    #TODO optimize space by only loading an image when it's needed.
-    #TODO loading all images at once is not necessary for most of them might not even be used
-    images = {}
-    for image in os.listdir(imgsDir):
-        images[image] = cv.imread(os.path.join(imgsDir, image))
+    converted_images = []
+
+    for file_name in image_dict:
+        
+        # converts the image to the desired color space
+        converted_image = cv.cvtColor(image_dict[file_name], conversion_code)
+
+        converted_images.append( (file_name, converted_image) )
     
-    #TODO UN-hardcode the 256 to allow for different in and out resolution
-    # newImg = Image.new("RGB", (256**2, 256**2))
-    newImg = np.zeros((256**2, 256**2, 3), dtype="uint8")
-    
-    for i in range(len(imgData)):
-        for j in range(len(imgData[0])):
-            # print(i, j)
-            newImg[256*i:256*(i+1), 256*j:256*(j+1)] = images[imgData[i][j][0]]
-            # newImg.paste(images[imgData[i][j][0]], (256*j, 256*i))
-    
-    return newImg
-
-
-def mosaicedImage(targetImage, imagesDir, reuseImages=True):
-    #TODO Major rewrite to allow more flexibility in the settings
-
-    timg = cv.imread(targetImage) # matr of target image
-    mosImgs = loadDirImgs(imagesDir) 
-    hsvMosImgs = cvtHSV(mosImgs)
-    avgHSVImgs = [(name, avgNpImgMat(matr)) for name, matr in hsvMosImgs.items()]
-    print(len(avgHSVImgs))
-
-    mockMosaic = []
-    for i in range(timg.shape[0]):
-        mockMosaic.append([])
-        for j in range(timg.shape[1]):
-            mockMosaic[i].append(0)
-
-
-
-    hsvtimgList = cvtHSV({targetImage: timg})[targetImage].tolist()
-
-    for i in range(len(mockMosaic)):
-        for j in range(len(mockMosaic[0])):
-            ttl, px, dist = kppv((targetImage.split("/")[-1], hsvtimgList[i][j]), avgHSVImgs, 1)[0]
-            px = [math.floor(n) for n in px]
-            mockMosaic[i][j] = (ttl, px, dist)
-    
-    newimg = imgFromData(imagesDir, mockMosaic)
-    return newimg
-
-
-
+    return converted_images
 
 
 if __name__ == "__main__":
