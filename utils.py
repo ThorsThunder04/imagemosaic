@@ -1,14 +1,13 @@
 import os, math
-from PIL import Image
+# from PIL import Image
 import numpy as np
 import cv2 as cv
 
 class ImageTile:
 
-    def __init__(self, file_name: str, image_matrix: np.array, image_color: tuple[int,int,int]):
+    def __init__(self, file_name: str, image_matrix: np.ndarray, image_color: tuple[int,int,int]):
         self.file_name = file_name
 
-        self.size = image_matrix.shape[:2]
         self.image_matrix = image_matrix
         self.image_color = image_color
 
@@ -74,34 +73,34 @@ def closest_point(pt: tuple[object, tuple],
     closest = (dist3D(target_coords, pt_list[i][1]), pt_list[i])
 
     for i in range(len(pt_list)):
-        if pt_list[i][0] != target_name:
-            dist = dist3D(target_coords, pt_list[i][1])
+        # if pt_list[i][0] != target_name:
+        dist = dist3D(target_coords, pt_list[i][1])
 
-            # if this point is closer then the previous closest point
-            if dist < closest[0]:
-                closest = (dist, pt_list[i])
+        # if this point is closer then the previous closest point
+        if dist < closest[0]:
+            closest = (dist, pt_list[i])
 
     # return the closest point
     return closest[1]
 
 
-def average_image_color(image_matrix: np.array) -> list[int]:
+def average_image_color(image_matrix: np.ndarray) -> np.ndarray:
     """
     Calculates the average of all (r,g,b) values of an image
 
     Paramaters
     ----------
-    image_matrix : (np.array)
+    image_matrix : (np.ndarray)
         The image we want to calculate the average from
     
     Returns
     -------
-    (list[int])
+    (np.ndarray)
         A list of 3 integers
     """
-    return np.mean(image_matrix, (0,1), dtype=np.uint8).tolist()
+    return np.floor(np.mean(image_matrix, (0,1)))
 
-def loadDirImgs(path: str) -> ImageTile:
+def load_imgs_from_dir(path: str) -> dict[str, ImageTile]:
     """
     Loads all images of a given directory into a dictionary
 
@@ -124,7 +123,7 @@ def loadDirImgs(path: str) -> ImageTile:
     
     return dict_of_images
 
-def convert_to_color_space(image_dict: dict[str, dict], conversion_code: int = cv.COLOR_BGR2HSV) -> list[str, np.array]:
+def convert_images_to_color_space(image_dict: dict[str, ImageTile], conversion_code: int = cv.COLOR_BGR2HSV) -> list[str, np.ndarray]:
     """
     Given a dictionary of images, returns a list of tuples with the image filename and the image converted to a color space
 
@@ -137,28 +136,161 @@ def convert_to_color_space(image_dict: dict[str, dict], conversion_code: int = c
     
     Returns
     -------
-    (list[str, np.array])
-        A list of tuples. Each tuple contains the image's name and the image's np.array converted to the desired color space
+    (list[str, np.ndarray])
+        A list of tuples. Each tuple contains the image's name and the image's np.ndarray converted to the desired color space
     """
 
     converted_images = []
 
-    for file_name in image_dict:
+    for file_name, tile in image_dict.items():
         
         # converts the image to the desired color space
-        converted_image = cv.cvtColor(image_dict[file_name], conversion_code)
+        converted_image = cv.cvtColor(tile.image_matrix, conversion_code)
 
         converted_images.append( (file_name, converted_image) )
     
     return converted_images
 
+def calculate_image_positions(target_filename: str, target_image: np.ndarray, tile_images: dict[str, ImageTile]) -> tuple[list[list[str]], set[str]] :
+    """
+    Calculates which images to place on which pixels
+    The positions will be represented by a 2d list of the same dimensions as `target_image`. 
+
+    Paramaters
+    ----------
+    target_filename : (str)
+        The filename of the target image
+    target_image : (np.ndarray)
+        The target image for the mosaic
+    tile_images : (dict[str, ImageTile])
+        The images we will use a tiles for the mosaic
+    
+    Returns
+    -------
+    (list[list[str]])
+        List of same dimentions as `target_image` containing an image name in the place of each pixel
+    (set[str])
+        A set of all images that are used in the resulting mosaic (will be used to free up memory)
+    """
+
+    target_height, target_width = target_image.shape[:2]
+    image_positions = [[""]*target_width for _ in range(target_height)]
+    # print(image_positions)
+    used_images = set()
+
+    # we will used HSV to determin how close an image is to another in 3d space
+    #NOTE This method should probably be revisited to get a more accurate idea of "closeness".
+    print("Converting to HSV")
+    converted_image_averages = [(title, average_image_color(img)) for title,img in convert_images_to_color_space(tile_images)]
+    converted_target_average = average_image_color(cv.cvtColor(target_image, code = cv.COLOR_BGR2HSV))
+
+    print("Finding closest image for each pixel")
+    # start calculating the positions
+    for r in range(target_height):
+        for c in range(target_width):
+
+            # calculates the image with the color that resembles the pixel color at (r,c) the most
+            closest_image = closest_point((target_filename, converted_target_average), converted_image_averages)
+
+            used_images.add(closest_image[0])
+            image_positions[r][c] = closest_image[0]
+    
+    return image_positions, used_images
+
+def place_image_at(row: int,
+                   row_img_names: list[str],
+                   result_image: np.ndarray,
+                   tile_images: dict[str, ImageTile],
+                   tile_size: int
+                   ) -> None:
+    """
+    Given a row to start at, place each image from `row_img_names` on it's respective position in result_image
+
+    Paramaters
+    ----------
+    row : (int)
+        The row of pixels to start placing images for
+    row_img_names : (list[str])
+        The respective image filenames for each pixel in that row
+    result_image : (np.ndarray)
+        Refernce to the image we are placing all the tile images onto
+    tile_images : (dict[str, ImageTile])
+        All the tile time images that will be used for the result image
+    tile_size : (int)
+        The 1:1 size of each tile image
+    """
+
+    # for each pixel on the given row
+    for c in range(len(row_img_names)):
+        # get the tile image's matrice
+        image_to_place = tile_images[row_img_names[c]].image_matrix
+
+
+        result_image[tile_size*row:tile_size*(row+1), tile_size*c:tile_size*(c+1)] = image_to_place
+        # result_image[row:c] = image_to_place
+    
+    
+    
+
+def create_mosaic(target_filename: str, tile_images_dir: str, tile_size: int = 64) -> None:
+    """
+    From a source image, create the mosaiced image with tile images
+
+    Paramaters
+    ----------
+    target_filename : (str)
+        The path to source image that the smaller tile images will try to recreate
+    tile_images_dir : (str)
+        The directory path to all the tile images
+    tile_size : (int), default: 64
+        The size that each tile image should be. Each tile image will be resized to an 1:1 ratio of this size
+    """
+
+
+    # initial load of data
+    target_image = cv.imread(target_filename)
+    target_h, target_w = target_image.shape[:2]
+    tile_images = load_imgs_from_dir(tile_images_dir)
+
+        
+
+    # resize tile images to `tile_size`
+    for _, img in tile_images.items():
+        img.image_matrix = cv.resize(img.image_matrix, (tile_size, tile_size))
+    print("Resize Done")
+    
+
+    # calculate where to place each image, and also save what images will be used
+    mosaic_plan, used_images = calculate_image_positions(target_filename, target_image, tile_images)
+    print("Positions Calculated")
+    print(used_images)
+    
+    # clear unused images
+    img_keys = list(tile_images.keys())
+    for key in img_keys:
+        if key not in used_images:
+            del tile_images[key]
+
+
+    # creates an empty image matrix for the result
+    result_image = np.zeros((tile_size*target_w, tile_size*target_h, 3), dtype=np.uint8)
+
+    print("Placing tiles")
+    # place all the tile images for each row of the target image
+    for row in range(len(mosaic_plan)):
+
+        place_image_at(row,
+                       mosaic_plan[row],
+                       result_image,
+                       tile_images,
+                       tile_size)
+        # print(row, target_h)
+    
+    return result_image
+    
+    
 
 if __name__ == "__main__":
-    # name2Num("imagestouse")
 
-    target = "./imgs/0.png"
-
-    mockmosaic = mosaicedImage(target, "./imgs")
-    print("saving Image!")
-    im = Image.fromarray(mockmosaic, "RGB")
-    im.save("out.png", "PNG")
+    result_image = create_mosaic("./imgs/0.png", "./us", 3) 
+    cv.imwrite("out.png", result_image)
