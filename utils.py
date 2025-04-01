@@ -1,7 +1,7 @@
 import os, math
-# from PIL import Image
 import numpy as np
 import cv2 as cv
+import threading as thd
 
 class ImageTile:
 
@@ -73,12 +73,12 @@ def closest_point(pt: tuple[object, tuple],
     closest = (dist3D(target_coords, pt_list[i][1]), pt_list[i])
 
     for i in range(len(pt_list)):
-        # if pt_list[i][0] != target_name:
-        dist = dist3D(target_coords, pt_list[i][1])
+        if pt_list[i][0] != target_name:
+            dist = dist3D(target_coords, pt_list[i][1])
 
-        # if this point is closer then the previous closest point
-        if dist < closest[0]:
-            closest = (dist, pt_list[i])
+            # if this point is closer then the previous closest point
+            if dist < closest[0]:
+                closest = (dist, pt_list[i])
 
     # return the closest point
     return closest[1]
@@ -182,7 +182,7 @@ def calculate_image_positions(target_filename: str, target_image: np.ndarray, ti
     #NOTE This method should probably be revisited to get a more accurate idea of "closeness".
     print("Converting to HSV")
     converted_image_averages = [(title, average_image_color(img)) for title,img in convert_images_to_color_space(tile_images)]
-    converted_target_average = average_image_color(cv.cvtColor(target_image, code = cv.COLOR_BGR2HSV))
+    converted_target = cv.cvtColor(target_image, code = cv.COLOR_BGR2HSV)
 
     print("Finding closest image for each pixel")
     # start calculating the positions
@@ -190,7 +190,7 @@ def calculate_image_positions(target_filename: str, target_image: np.ndarray, ti
         for c in range(target_width):
 
             # calculates the image with the color that resembles the pixel color at (r,c) the most
-            closest_image = closest_point((target_filename, converted_target_average), converted_image_averages)
+            closest_image = closest_point((target_filename, converted_target[r, c]), converted_image_averages)
 
             used_images.add(closest_image[0])
             image_positions[r][c] = closest_image[0]
@@ -263,7 +263,7 @@ def create_mosaic(target_filename: str, tile_images_dir: str, tile_size: int = 6
     # calculate where to place each image, and also save what images will be used
     mosaic_plan, used_images = calculate_image_positions(target_filename, target_image, tile_images)
     print("Positions Calculated")
-    print(used_images)
+    # print(used_images)
     
     # clear unused images
     img_keys = list(tile_images.keys())
@@ -292,5 +292,5 @@ def create_mosaic(target_filename: str, tile_images_dir: str, tile_size: int = 6
 
 if __name__ == "__main__":
 
-    result_image = create_mosaic("./imgs/0.png", "./us", 3) 
+    result_image = create_mosaic("./imgs/1.png", "./us", 3) 
     cv.imwrite("out.png", result_image)
