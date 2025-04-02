@@ -123,7 +123,7 @@ def load_imgs_from_dir(path: str) -> dict[str, ImageTile]:
     
     return dict_of_images
 
-def convert_images_to_color_space(image_dict: dict[str, ImageTile], conversion_code: int = cv.COLOR_BGR2HSV) -> list[str, np.ndarray]:
+def convert_images_to_color_space(image_dict: dict[str, ImageTile], conversion_code: int = cv.COLOR_BGR2YUV) -> list[str, np.ndarray]:
     """
     Given a dictionary of images, returns a list of tuples with the image filename and the image converted to a color space
 
@@ -131,7 +131,7 @@ def convert_images_to_color_space(image_dict: dict[str, ImageTile], conversion_c
     ----------
     image_dict : (dict[str, ImageTile])
         A dictionary of ImageTile objects
-    conversion_code : (int), default: cv.COLOR_BGR2HSV
+    conversion_code : (int), default: cv.COLOR_BGR2YUV
         The opencv2 colorspace we wish to convert to
     
     Returns
@@ -178,9 +178,9 @@ def calculate_image_positions(target_filename: str, target_image: np.ndarray, ti
     # print(image_positions)
     used_images = set()
 
-    # we will used HSV to determin how close an image is to another in 3d space
+    # we will used YUV to determin how close an image is to another in 3d space
     #NOTE This method should probably be revisited to get a more accurate idea of "closeness".
-    print("Converting to HSV")
+    print("Converting to YUV color space")
     converted_image_averages = [(title, average_image_color(img)) for title,img in convert_images_to_color_space(tile_images, cv.COLOR_BGR2YUV)]
     converted_target = cv.cvtColor(target_image, code = cv.COLOR_BGR2YUV)
 
@@ -305,5 +305,5 @@ def create_mosaic(target_filename: str,
 if __name__ == "__main__":
 
 
-    result_image = create_mosaic("./imgs/1.png", "./us", 32, (64,64)) 
+    result_image = create_mosaic("./imgs/1.png", "./us", 16, (256,256)) 
     cv.imwrite("out.png", result_image)

@@ -1,4 +1,3 @@
-### Currently undergoing a rewrite on the [rewrite branch](https://github.com/ThorsThunder04/imagemosaic/tree/rewrite)
 
 # Image Mosaic
 
