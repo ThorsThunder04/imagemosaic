@@ -181,8 +181,8 @@ def calculate_image_positions(target_filename: str, target_image: np.ndarray, ti
     # we will used HSV to determin how close an image is to another in 3d space
     #NOTE This method should probably be revisited to get a more accurate idea of "closeness".
     print("Converting to HSV")
-    converted_image_averages = [(title, average_image_color(img)) for title,img in convert_images_to_color_space(tile_images)]
-    converted_target = cv.cvtColor(target_image, code = cv.COLOR_BGR2HSV)
+    converted_image_averages = [(title, average_image_color(img)) for title,img in convert_images_to_color_space(tile_images, cv.COLOR_BGR2YUV)]
+    converted_target = cv.cvtColor(target_image, code = cv.COLOR_BGR2YUV)
 
     print("Finding closest image for each pixel")
     # start calculating the positions
@@ -232,7 +232,11 @@ def place_image_at(row: int,
     
     
 
-def create_mosaic(target_filename: str, tile_images_dir: str, tile_size: int = 64) -> None:
+def create_mosaic(target_filename: str, 
+                  tile_images_dir: str,
+                  tile_size: int = 64,
+                  target_image_size: (tuple[int, int]|None) = None
+                  ) -> None:
     """
     From a source image, create the mosaiced image with tile images
 
@@ -244,12 +248,20 @@ def create_mosaic(target_filename: str, tile_images_dir: str, tile_size: int = 6
         The directory path to all the tile images
     tile_size : (int), default: 64
         The size that each tile image should be. Each tile image will be resized to an 1:1 ratio of this size
+    target_image_size : (tuple[int,int]|None), default: None
+        A tuple for the resolution of the target image, of the form (WIDTH, HEIGHT)
+        If `None` is given, then it will take the original resolution of the target image.
     """
 
 
     # initial load of data
     target_image = cv.imread(target_filename)
-    target_h, target_w = target_image.shape[:2]
+    # if a custom target size is given
+    if target_image_size is not None:
+        target_w, target_h = target_image_size
+        target_image = cv.resize(target_image, (target_w, target_h))
+    else:
+        target_h, target_w = target_image.shape[:2]
     tile_images = load_imgs_from_dir(tile_images_dir)
 
         
@@ -292,5 +304,6 @@ def create_mosaic(target_filename: str, tile_images_dir: str, tile_size: int = 6
 
 if __name__ == "__main__":
 
-    result_image = create_mosaic("./imgs/1.png", "./us", 3) 
+
+    result_image = create_mosaic("./imgs/1.png", "./us", 32, (64,64)) 
     cv.imwrite("out.png", result_image)
