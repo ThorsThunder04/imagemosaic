@@ -229,8 +229,6 @@ def place_image_at(row: int,
         result_image[tile_size*row:tile_size*(row+1), tile_size*c:tile_size*(c+1)] = image_to_place
         # result_image[row:c] = image_to_place
     
-    
-    
 
 def create_mosaic(target_filename: str, 
                   tile_images_dir: str,
@@ -285,7 +283,7 @@ def create_mosaic(target_filename: str,
 
 
     # creates an empty image matrix for the result
-    result_image = np.zeros((tile_size*target_w, tile_size*target_h, 3), dtype=np.uint8)
+    result_image = np.zeros((tile_size*target_h, tile_size*target_w, 3), dtype=np.uint8)
 
     print("Placing tiles")
     # place all the tile images for each row of the target image
@@ -305,5 +303,5 @@ def create_mosaic(target_filename: str,
 if __name__ == "__main__":
 
 
-    result_image = create_mosaic("./imgs/1.png", "./us", 16, (256,256)) 
-    cv.imwrite("out.png", result_image)
+    result_image = create_mosaic("./imgs/1.png", "./us", 8, None) 
+    cv.imwrite("out1.png", result_image)

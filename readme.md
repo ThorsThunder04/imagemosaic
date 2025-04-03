@@ -2,10 +2,9 @@
 # Image Mosaic
 
 This program should make a mosaic image based off of a target image and a given dataset of other images.
-This project still isn't very complet yet.
 
 So for each pixel of the target image, we try and find one of the dataset images that matches the color of that pixel the best. Then we place the image at that location.
-In the end, we end up getting a VERY big image. But I plan on making that more customizable in the future.
+In the end, we end up getting a mosaiced image made up of loads of tile images.
 
 # Dependencies
 
