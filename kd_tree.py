@@ -1,4 +1,4 @@
-from random import sample
+from random import randint, choice
 from math import ceil
 
 class KdTree:
@@ -110,6 +110,65 @@ def build_kd_tree(points: list[tuple[any, tuple[int,...]]],
 
     return t
 
+def k_dist(pt1: tuple[int,...], pt2: tuple[int,...], k: int) -> float:
+    
+    square_sum = 0
+    for i in range(k):
+        square_sum += (pt1[i]-pt2[i])**2
+    
+    return square_sum**0.5
+
+def closest_point_kdt(pt: tuple[int,...],
+                      t: KdTree,
+                      k: int) -> tuple[float, tuple[any, tuple[int,...]]]:
+    """
+    Find the closest point to a given point in a k-d Tree
+
+    Paramaters
+    ----------
+    pt : (tuple[int,...])
+        The target point we want to find the closest point to in `t`
+    t : (KdTree)
+        Root of the KdTree we are looking for a closest point for
+    k : (int)
+        The dimension of the k-d tree
+    
+    Returns
+    -------
+    (tuple[any, tuple[int,...]])
+        The closest point to `pt`
+    """
+    # if there's closer points to the left
+    if pt[t.axis] <= t.val[1][t.axis] and t.left is not None:
+        cc_point = closest_point_kdt(pt, t.left, k)
+        
+        if t.right is not None:
+            dist2 = k_dist(pt, t.right.val[1], k)
+            if dist2 < cc_point[0]:
+                cc_point2 = closest_point_kdt(pt, t.right, k)
+                if cc_point2[0] < cc_point[0]:
+                    cc_point = cc_point2
+        
+        return cc_point
+
+    # if there's closer points to the right
+    elif pt[t.axis] > t.val[1][t.axis] and t.right is not None:
+        cc_point =  closest_point_kdt(pt, t.right, k)
+
+        if t.left is not None:
+            dist2 = k_dist(pt, t.left.val[1], k)
+            if dist2 < cc_point[0]:
+                cc_point2 = closest_point_kdt(pt, t.left, k)
+                if cc_point2[0] < cc_point[0]:
+                    cc_point = cc_point2
+        
+        return cc_point
+
+    # otherwise it's a leaf / we can't go to a lower branch
+    else:
+        dist = k_dist(pt, t.val[1], k)
+        return (dist, t.val)
+    
 
 if __name__ == "__main__":
 
@@ -118,15 +177,68 @@ if __name__ == "__main__":
             print(node.val)
             prefix_disp(node.left)
             prefix_disp(node.right)
-        
-
     
-    points = [("1", (1,2,3)), ("2", (4,3,3)), ("5", (23,44,12))]
+    def merge_freq_dicts(dict1, dict2):
+        for key,value in dict2.items():
+            if key not in dict1:
+                dict1[key] = 0
+            
+            dict1[key] += value
+        
+        return dict1
+            
+    
+    def depth_freqs(t: KdTree, depth: int = 0):
+
+        if t.is_leaf():
+            return {depth: 1}
+        else:
+            right_depths = {}
+            if t.right is not None:
+                right_depths = depth_freqs(t.right, depth+1)
+            
+            left_depths = {}
+            if t.left is not None:
+                left_depths = depth_freqs(t.left, depth+1)
+            
+            return merge_freq_dicts(left_depths, right_depths)
+
+    def closest_point_linear(pt: tuple[int,...],
+                             points: list[tuple[any, tuple[int,...]]],
+                             k: int) -> tuple[any, tuple[int,...]]:
+
+        min_pt = (k_dist(pt, points[0][1], k), points[0])
+
+        for i in range(1, len(points)):
+            dist = k_dist(pt, points[i][1], k)
+            if dist < min_pt[0]:
+                min_pt = (dist, points[i])
+        
+        return min_pt
+        
+    
+    # points = [("1", (1,2,3)), ("2", (4,3,3)), ("5", (23,44,12))]
+    points = []
+    for i in range(100):
+        point = (randint(0, 1000), randint(0,1000), randint(0,1000))
+        points.append( (str(i), point))
+        
 
     t = build_kd_tree(points, 3)
 
     prefix_disp(t)
     print(t.make_string())
-    assert t.point_in_tree(("1", (1,2,3)))
-    assert not t.point_in_tree(("1", (5,2,3)))
-    assert t.point_in_tree(("2", (4,3,3)))
+    # assert t.point_in_tree(("1", (1,2,3)))
+    # assert not t.point_in_tree(("1", (5,2,3)))
+    # assert t.point_in_tree(("2", (4,3,3)))
+    print(depth_freqs(t))
+
+    pt = ("", (432,12,774))
+    print("Linear closest point to {} is {}".format(
+        pt,
+        closest_point_linear(pt[1], points, 3)
+    ))
+    print("k-d tree closest point to {} is {}".format(
+        pt,
+        closest_point_kdt(pt[1], t, 3)
+    ))
