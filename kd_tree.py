@@ -138,36 +138,43 @@ def closest_point_kdt(pt: tuple[int,...],
     (tuple[any, tuple[int,...]])
         The closest point to `pt`
     """
-    # if there's closer points to the left
-    if pt[t.axis] <= t.val[1][t.axis] and t.left is not None:
-        cc_point = closest_point_kdt(pt, t.left, k)
-        
-        if t.right is not None:
-            dist2 = k_dist(pt, t.right.val[1], k)
-            if dist2 < cc_point[0]:
-                cc_point2 = closest_point_kdt(pt, t.right, k)
-                if cc_point2[0] < cc_point[0]:
-                    cc_point = cc_point2
-        
-        return cc_point
-
-    # if there's closer points to the right
-    elif pt[t.axis] > t.val[1][t.axis] and t.right is not None:
-        cc_point =  closest_point_kdt(pt, t.right, k)
-
-        if t.left is not None:
-            dist2 = k_dist(pt, t.left.val[1], k)
-            if dist2 < cc_point[0]:
-                cc_point2 = closest_point_kdt(pt, t.left, k)
-                if cc_point2[0] < cc_point[0]:
-                    cc_point = cc_point2
-        
-        return cc_point
-
-    # otherwise it's a leaf / we can't go to a lower branch
-    else:
+    if t is None: return None
+    elif t.is_leaf():
         dist = k_dist(pt, t.val[1], k)
         return (dist, t.val)
+    
+    current_closest = (
+        k_dist(pt, t.val[1], k),
+        t.val
+    )
+    # going down left branch
+    if pt[t.axis] <= t.val[1][t.axis]:
+        child_closest1 = closest_point_kdt(pt, t.left, k)
+        # if the child closest is closer then the current closest
+        if child_closest1 is not None and child_closest1[0] < current_closest[0]:
+            current_closest = child_closest1
+
+        
+        # if there's possibly closer on the other side of the splitting branch
+        if abs(pt[t.axis] - t.val[1][t.axis]) < current_closest[0]:
+            child_closest2 = closest_point_kdt(pt, t.right, k)
+            if child_closest2 is not None and child_closest2[0] < current_closest[0]:
+                current_closest = child_closest2
+    else:
+        child_closest1 = closest_point_kdt(pt, t.right, k)
+        # if the child closest is closer then the current closest
+        if child_closest1 is not None and child_closest1[0] < current_closest[0]:
+            current_closest = child_closest1
+        
+        # if there's possibly closer on the other side of the splitting branch
+        if abs(pt[t.axis] - t.val[1][t.axis]) < current_closest[0]:
+            child_closest2 = closest_point_kdt(pt, t.left, k)
+            if child_closest2 is not None and child_closest2[0] < current_closest[0]:
+                current_closest = child_closest2
+        
+    return current_closest
+    
+        
     
 
 if __name__ == "__main__":
@@ -218,27 +225,31 @@ if __name__ == "__main__":
         
     
     # points = [("1", (1,2,3)), ("2", (4,3,3)), ("5", (23,44,12))]
-    points = []
-    for i in range(100):
-        point = (randint(0, 1000), randint(0,1000), randint(0,1000))
-        points.append( (str(i), point))
-        
+    def make_pts(n: int = 100, k: int = 1000):
+        points = []
+        for i in range(n):
+            point = (randint(0, k), randint(0,k), randint(0,k))
+            points.append( (str(i), point) )
+        return points
+    
+    points = make_pts()
 
     t = build_kd_tree(points, 3)
 
-    prefix_disp(t)
-    print(t.make_string())
+    # prefix_disp(t)
+    # print(t.make_string())
     # assert t.point_in_tree(("1", (1,2,3)))
     # assert not t.point_in_tree(("1", (5,2,3)))
     # assert t.point_in_tree(("2", (4,3,3)))
     print(depth_freqs(t))
 
-    pt = ("", (432,12,774))
-    print("Linear closest point to {} is {}".format(
-        pt,
-        closest_point_linear(pt[1], points, 3)
-    ))
-    print("k-d tree closest point to {} is {}".format(
-        pt,
-        closest_point_kdt(pt[1], t, 3)
-    ))
+    # test the closest point algo 100 times against the linear one to check it's validity (cuz I don't feel like making a proof for this)
+    # pt = (112, 432, 0)
+    for i in range(2000):
+        pt = make_pts(1)[0][1]
+        points = make_pts(1000)
+        t = build_kd_tree(points, 3)
+        distlin = closest_point_linear(pt, points, 3)
+        distkdt = closest_point_kdt(pt, t, 3)
+        if not (distlin[1] == distkdt[1]):
+            print(i, distkdt, distlin)
