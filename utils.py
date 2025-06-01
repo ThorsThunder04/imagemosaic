@@ -2,6 +2,7 @@ import os, math
 import numpy as np
 import cv2 as cv
 import threading as thd
+from kd_tree import build_kd_tree, closest_point_kdt, KdTree
 
 class ImageTile:
 
@@ -186,11 +187,14 @@ def calculate_image_positions(target_filename: str, target_image: np.ndarray, ti
 
     print("Finding closest image for each pixel")
     # start calculating the positions
+
+    point_kdt = build_kd_tree(converted_image_averages, 3)
     for r in range(target_height):
         for c in range(target_width):
 
             # calculates the image with the color that resembles the pixel color at (r,c) the most
-            closest_image = closest_point((target_filename, converted_target[r, c]), converted_image_averages)
+            # closest_image = closest_point((target_filename, converted_target[r, c]), converted_image_averages)
+            closest_image = closest_point_kdt(converted_target[r,c], point_kdt, 3)[1]
 
             used_images.add(closest_image[0])
             image_positions[r][c] = closest_image[0]
@@ -233,7 +237,7 @@ def place_image_at(row: int,
 def create_mosaic(target_filename: str, 
                   tile_images_dir: str,
                   tile_size: int = 64,
-                  target_image_size: (tuple[int, int]|None) = None
+                  target_image_size: "(tuple[int, int]|None)" = None
                   ) -> None:
     """
     From a source image, create the mosaiced image with tile images
@@ -303,5 +307,5 @@ def create_mosaic(target_filename: str,
 if __name__ == "__main__":
 
 
-    result_image = create_mosaic("./imgs/1.png", "./us", 8, None) 
+    result_image = create_mosaic("./tobyaiko.png", "./us", 16, (64,64)) 
     cv.imwrite("out1.png", result_image)

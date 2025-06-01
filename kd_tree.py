@@ -138,10 +138,10 @@ def closest_point_kdt(pt: tuple[int,...],
     (tuple[any, tuple[int,...]])
         The closest point to `pt`
     """
-    if t is None: return None
-    elif t.is_leaf():
-        dist = k_dist(pt, t.val[1], k)
-        return (dist, t.val)
+    # this statement treats if the branch was empty
+    # it also treats if the node is a leaf by using the `current_closest` variable after
+    if t is None:
+        return None
     
     current_closest = (
         k_dist(pt, t.val[1], k),
@@ -155,18 +155,18 @@ def closest_point_kdt(pt: tuple[int,...],
             current_closest = child_closest1
 
         
-        # if there's possibly closer on the other side of the splitting branch
+        # if there's possibly closer on the other side of the splitting node
         if abs(pt[t.axis] - t.val[1][t.axis]) < current_closest[0]:
             child_closest2 = closest_point_kdt(pt, t.right, k)
             if child_closest2 is not None and child_closest2[0] < current_closest[0]:
                 current_closest = child_closest2
-    else:
+    else: # going down right branch
         child_closest1 = closest_point_kdt(pt, t.right, k)
         # if the child closest is closer then the current closest
         if child_closest1 is not None and child_closest1[0] < current_closest[0]:
             current_closest = child_closest1
         
-        # if there's possibly closer on the other side of the splitting branch
+        # if there's possibly closer on the other side of the splitting node
         if abs(pt[t.axis] - t.val[1][t.axis]) < current_closest[0]:
             child_closest2 = closest_point_kdt(pt, t.left, k)
             if child_closest2 is not None and child_closest2[0] < current_closest[0]:
